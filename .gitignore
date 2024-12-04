@@ -1,2 +1,8 @@
 # Venv
 .chat-memory
+
+# Models
+models
+
+# Env files
+.env
