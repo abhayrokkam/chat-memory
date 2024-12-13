@@ -78,7 +78,7 @@ class JudgementGenerator():
 
         return pipe
     
-    def get_messages(user_content: str) -> List[Dict]:
+    def get_messages(self, user_content: str) -> List[Dict]:
         """
         Generates a list of messages for the model to evaluate relevance.
 
@@ -129,6 +129,8 @@ class JudgementGenerator():
             
             User: The sky is blue today.
             Assistant: FALSE
+            
+            The above given conversations are examples. The user input is given below. Using the examples as a template, extract the memory from the below given message.
         """
         
         messages = [ 
@@ -242,7 +244,7 @@ class MemoryGenerator():
 
         return pipe
     
-    def get_messages(user_content: str) -> List[Dict]:
+    def get_messages(self, user_content: str) -> List[Dict]:
         """
         Prepares a list of messages for the model to extract relevant information for memory.
 
@@ -284,16 +286,21 @@ class MemoryGenerator():
             Examples:
             
             User: Hey, my name is Adam.
-            Assistant: Name is Adam.
+            Assistant: User is Adam.
             
             User: I love my brother John.
-            Assistant: Brother named John.
+            Assistant: User has a brother named John
             
             User: The sky is blue today.
             Assistant: 
             
             User: Me and my wife Emily just came from Coldplay concert. I love them.
-            Assistant: Wife named Emily. Likes Coldplay.
+            Assistant: User has a wife named Emily. User likes the band Coldplay.
+            
+            User: I met Linda today. We had a drink. She is such a good friend. I remember when I met her in the Beatles concert.
+            Assitant: User has a friend named Linda. User met Linda in a Beatles concert.
+            
+            The above given conversations are examples. The user input is given below. Using the examples as a template, extract the memory from the below given message.
         """
         
         messages = [ 
