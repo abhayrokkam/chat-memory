@@ -1,0 +1,26 @@
+(health) User is experiencing joint pain and feels slow today.
+(health) User takes pain relievers around noon and tries to move around every few hours.
+(health) User has a check-up with Dr. Emily Brown next Tuesday at 3 PM.
+(family) User has a daughter named Sarah.
+(family) Her job is busy and she sometimes loses track of time.
+(health) She works long hours at the hospital and loves helping people.
+(personal) She has a big heart.
+(friend) User's old friend Peter has been feeling under the weather and is tired, but hasn't seen a doctor yet.
+(health) User is worried about Peter's health.
+(friend) User will tell his friend he is thinking about him because he hates going to the doctor.
+(friend) User has a friend named Peter who used to bring homemade cookies every month.
+(friend) User used to bake with Peter.
+(personal) User remembers the smell of the cookies they baked together.
+(personal) User has been thinking a lot about the past recently.
+(family) User worked in the garden with his late wife, Laura.
+(personal) User misses Laura.
+(family) They grew tomatoes together.
+(friend) They shared homemade tomato sauce with family and friends.
+(personal) Growing tomatoes was a tradition.
+(friend) User remembers Laura.
+(friend) User appreciates the time spent with Laura and values the support of the listener.
+(friend) User's neighbor, John, invited the user for a walk tomorrow.
+(personal) The user plans to join and it will be after some time.
+(family) User enjoys John's company.
+(personal) User needs to get new shoes for walking as the old ones are worn out.
+(personal) The user appreciates the companion's thoughtfulness.
