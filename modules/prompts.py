@@ -53,3 +53,40 @@ memory_gen_prompt = """
             
             The above given conversations are examples. The user input is given below. Using the examples as a template, extract the memory from the below given message.
         """
+
+memory_agent_prompt = """
+            <|im_start|>system
+            You are a helpful assistant.
+            You have to give reasoning using the incoming memory.
+            The solution should include the given format after the reasoning: {"name": "function_name", "arguments": {"arg_1": "value_1", "arg_2": value_2, ...}}.
+            The solution can be NONE.
+            <|im_end|>
+
+            <|im_start|>user
+            You have access to the following functions:
+
+            {function_structure_save_memory}
+            {function_structure_replace_memory}
+
+            Edge cases you must handle:
+            - If there are no functions that match the user request, you will respond with NONE.<|im_end|>
+
+            <|im_start|>User Memories
+            {memories}
+            <|im_end|>
+
+            <|im_start|>Incoming Memory
+            {incoming_memory}
+            <|im_end|>
+
+            <|im_start|>question
+            User Memories show the saved memories in the system.
+            If the Incoming Memory or a similar memory already exists, your solution should be NONE.
+            If the Incoming Memory or a similar memory does not exist in the User Memories, save the memory.
+            If the Incoming Memory or a similar memory contradicts a memory in the User Memories, replace the old memory with a new memory.
+
+            Which function should I use for the Incoming Memory?
+            <|im_end|>
+
+            <|im_start|>Solution
+        """

@@ -2,66 +2,50 @@ import torch
 import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
-from prompts import judgement_gen_prompt, memory_gen_prompt
+from langchain.utils.openai_functions import convert_pydantic_to_openai_function
+from prompts import judgement_gen_prompt, memory_gen_prompt, memory_agent_prompt
 
+from pydantic import BaseModel, Field
 from typing import List, Dict
 
 class JudgementGenerator():
     """
-    A class that generates judgements on whether a user's message is relevant for memory.
+    A class that determines if a user's message is relevant for memory.
 
-    The `JudgementGenerator` class is responsible for evaluating user-provided content 
-    to determine if the message contains relevant information that should be remembered 
-    by a personal companion. The model evaluates the message and generates a "TRUE" or 
-    "FALSE" judgement based on whether the message contains important personal information 
-    for the user, such as family matters, milestones, health issues, or medication schedules.
-
-    The class loads a pre-trained causal language model and uses it to generate judgements 
-    based on system-defined instructions. The model pipeline is initialized when the class 
-    is instantiated, and the `get_judgement` method is used to assess individual user messages.
+    The `JudgementGenerator` evaluates user messages to decide if they contain important personal information 
+    (e.g., family matters, health issues) that should be remembered by a personal companion. 
+    It uses a pre-trained language model to generate a "TRUE" or "FALSE" judgement based on predefined instructions.
 
     Attributes:
-        model_id (str): The identifier for the pre-trained model to be used for text generation.
-        pipe (transformers.pipelines.text_generation.TextGenerationPipeline): The text generation pipeline
-            used to generate the judgements based on user input.
+        model_id (str): Identifier for the pre-trained model.
+        pipe (transformers.pipelines.text_generation.TextGenerationPipeline): Pipeline for generating judgements.
 
     Methods:
-        get_pipeline(): Initializes and returns a text generation pipeline for the model.
-        get_messages(user_content: str) -> List[Dict]: Prepares and returns the system and user messages 
-                                                      for model evaluation.
-        get_judgement(user_content: str) -> str: Evaluates the user content and generates a judgement 
-                                                 indicating whether the message is relevant for memory.
-    
+        get_pipeline(): Initializes and returns the text generation pipeline.
+        get_messages(user_content: str) -> List[Dict]: Prepares system and user messages for evaluation.
+        get_judgement(user_content: str) -> str: Evaluates user content and returns whether it's relevant for memory.
+
     Example:
         > judgement_gen = JudgementGenerator()
         > judgement = judgement_gen.get_judgement("I moved to New York last week.")
-        > print(judgement)
-        'TRUE'
-
+        > print(judgement)  # 'TRUE'
         > judgement = judgement_gen.get_judgement("Just had coffee.")
-        > print(judgement)
-        'FALSE'
+        > print(judgement)  # 'FALSE'
     """
     def __init__(self) -> None:
         self.model_id = "microsoft/Phi-3.5-mini-instruct"
-        self.pipe = self.get_pipeline()
+        self.pipe = self._init_pipeline()
     
-    def get_pipeline(self) -> transformers.pipelines.text_generation.TextGenerationPipeline:
+    def _init_pipeline(self) -> transformers.pipelines.text_generation.TextGenerationPipeline:
         """
-        Initializes and returns a text generation pipeline for the model.
+        Initializes and returns a text generation pipeline.
 
-        This function loads a pre-trained causal language model and its corresponding 
-        tokenizer using the specified model identifier. It then creates and returns a 
-        text generation pipeline, which can be used for generating text based on 
-        provided input. The model is loaded to run on the GPU using the `cuda` device 
-        map for efficient computation.
-
-        The returned pipeline can be used to generate text from the model by providing 
-        input prompts.
+        Loads a pre-trained causal language model and tokenizer, then creates a 
+        text generation pipeline that runs on the GPU for efficient computation. 
+        The pipeline can be used to generate text from input prompts.
 
         Returns:
-            transformers.pipelines.text_generation.TextGenerationPipeline: A text generation 
-            pipeline that can be used to generate text based on user inputs.
+            transformers.pipelines.text_generation.TextGenerationPipeline: A text generation pipeline.
         """
         model = AutoModelForCausalLM.from_pretrained( 
             self.model_id,
@@ -82,24 +66,15 @@ class JudgementGenerator():
     
     def get_messages(self, user_content: str) -> List[Dict]:
         """
-        Generates a list of messages for the model to evaluate relevance.
+        Prepares messages for model evaluation of relevance.
 
-        This function prepares a list of messages, including system instructions 
-        and the user's content. The system content provides instructions to 
-        the model on how to assess the user's message for relevance, and the 
-        user's content is added to the list for evaluation.
-
-        The model will use these messages to determine whether the user's 
-        content contains information that the personal companion should remember, 
-        based on the context provided in the system content.
+        Creates a list of system instructions and user content for the model to assess if the user's message is relevant for memory.
 
         Args:
-            user_content (str): The input message from the user that will be evaluated 
-                                for relevance to the personal companion's memory.
+            user_content (str): The user's message to evaluate.
 
         Returns:
-            List[Dict]: A list of messages where the first message contains system 
-                        instructions, and the second message contains the user's input.
+            List[Dict]: A list of messages, with system instructions first and user input second.
 
         Example:
             > get_messages("I have an appointment with my doctor tomorrow.")
@@ -120,24 +95,16 @@ class JudgementGenerator():
     
     def get_judgement(self, user_content: str) -> str:
         """
-        Generates a judgement on whether the user's message is relevant for memory.
+        Generates a judgement on the relevance of the user's message for memory.
 
-        This function evaluates the user's content by passing it through a model pipeline 
-        that generates a judgement. The judgement determines if the content is considered 
-        relevant information for a personal companion to remember or not. The judgement is 
-        filtered to contain only alphabetic characters before being returned.
-
-        The returned judgement is used to either select the message for memory extraction 
-        or ignore it, based on its relevance.
+        Evaluates the user's content through a model pipeline to determine if it is relevant for memory. 
+        The judgement is filtered to include only alphabetic characters to remove spaces.
 
         Args:
-            user_content (str): The input message from the user that will be evaluated 
-                                for relevance to the companion's memory.
+            user_content (str): The user's message to evaluate.
 
         Returns:
-            str: The generated judgement, which indicates whether the message should be 
-                remembered or ignored. The result is a string consisting of alphabetic 
-                characters only, such as "TRUE" or "FALSE".
+            str: The judgement ("TRUE" or "FALSE") indicating whether the message should be remembered.
 
         Example:
             > instance.get_judgement("I moved to New York last week.")
@@ -163,47 +130,33 @@ class JudgementGenerator():
     
 class MemoryGenerator():
     """
-    A class responsible for generating and extracting memory-related information 
-    based on user input for a personal companion.
+    A class for generating and extracting memory-related information from user input.
 
-    This class utilizes a pre-trained language model and a text generation pipeline 
-    to analyze user input and extract relevant memory information. The personal companion 
-    will remember important details such as personal events, relationships, health issues, 
-    and milestones based on the processed user input. The class handles the task of 
-    generating structured memory details that the personal companion should remember.
+    Uses a pre-trained language model and text generation pipeline to identify relevant details 
+    (e.g., personal events, relationships, health) for the companion to remember.
 
     Attributes:
-        model_id (str): The identifier for the pre-trained model used for text generation.
-        pipe (transformers.pipelines.text_generation.TextGenerationPipeline): 
-            A text generation pipeline used to generate memory details from the user's input.
+        model_id (str): The pre-trained model identifier.
+        pipe (transformers.pipelines.text_generation.TextGenerationPipeline): Pipeline for generating memory details.
 
     Methods:
-        get_pipeline(): Initializes and returns the text generation pipeline for processing user input.
-        get_messages(user_content: str) -> List[Dict]: Prepares a list of messages, including system instructions and the user's input, 
-                                                       for processing by the model to extract relevant information for memory.
-        get_memory(user_content: str) -> str: Processes the user's input and generates memory-related information 
-                                              to be stored by the personal companion.
+        get_pipeline(): Returns the text generation pipeline.
+        get_messages(user_content: str) -> List[Dict]: Prepares system and user messages for memory extraction.
+        get_memory(user_content: str) -> str: Generates memory-related information to be stored.
+
     """
     def __init__(self) -> None:
         self.model_id = "Qwen/Qwen2.5-7B-Instruct"
-        self.pipe = self.get_pipeline()
+        self.pipe = self._init_pipeline()
     
-    def get_pipeline(self) -> transformers.pipelines.text_generation.TextGenerationPipeline:
+    def _init_pipeline(self) -> transformers.pipelines.text_generation.TextGenerationPipeline:
         """
-        Initializes and returns a text generation pipeline for the model.
+        Initializes and returns a text generation pipeline.
 
-        This function loads a pre-trained causal language model and its corresponding 
-        tokenizer using the specified model identifier. It then creates and returns a 
-        text generation pipeline, which can be used for generating text based on 
-        provided input. The model is loaded to run on the GPU using the `cuda` device 
-        map for efficient computation.
-
-        The returned pipeline can be used to generate text from the model by providing 
-        input prompts.
+        Loads a pre-trained model and tokenizer, creating a pipeline for text generation on the GPU.
 
         Returns:
-            transformers.pipelines.text_generation.TextGenerationPipeline: A text generation 
-            pipeline that can be used to generate text based on user inputs.
+            transformers.pipelines.text_generation.TextGenerationPipeline: A text generation pipeline.
         """
         model = AutoModelForCausalLM.from_pretrained( 
             self.model_id,
@@ -224,24 +177,16 @@ class MemoryGenerator():
     
     def get_messages(self, user_content: str) -> List[Dict]:
         """
-        Prepares a list of messages for the model to extract relevant information for memory.
+        Prepares messages for extracting relevant memory information.
 
-        This function creates a list of messages that includes a system instruction and the user's input. 
-        The system message provides instructions to the model on how to extract relevant facts from the 
-        user's content, such as important personal details, family matters, health information, or milestones. 
-        The user's content is then evaluated by the model to extract information that should be remembered 
-        by the personal companion.
-
-        The model is instructed to extract only the relevant information from the user's input and provide it 
-        in a structured format.
+        Creates a list with a system instruction and user input for the model to evaluate and 
+        extract relevant details (e.g., personal events, relationships, milestones) for memory.
 
         Args:
-            user_content (str): The user's input message that will be evaluated for relevant information 
-                                that should be remembered by the personal companion.
+            user_content (str): The user's input to evaluate for relevant memory details.
 
         Returns:
-            List[Dict]: A list of two messages, where the first message contains system instructions 
-                        and the second message contains the user's content for evaluation.
+            List[Dict]: A list with a system message and the user's content for evaluation.
 
         Example:
             > get_messages("I love my wife Emily and we just came from Coldplay concert.")
@@ -262,25 +207,16 @@ class MemoryGenerator():
     
     def get_memory(self, user_content: str) -> str:
         """
-        Generates memory-related information based on the user's input.
+        Generates memory-related information from user input.
 
-        This function processes the user's input to extract relevant memory details 
-        that should be stored by the personal companion. The function utilizes a 
-        text generation pipeline to analyze the provided content and generate a 
-        structured response that represents memory-related information to be remembered.
-
-        The generated memory includes relevant facts, such as personal details, 
-        health information, or significant life events, based on the context of 
-        the user's message.
+        Analyzes the user's input to extract relevant memory details 
+        (e.g., personal facts, health issues, life events) for the companion to remember.
 
         Args:
-            user_content (str): The user's input message from which memory-related 
-                                information will be extracted and generated.
+            user_content (str): The user's input to extract memory information from.
 
         Returns:
-            str: The generated memory output, which includes the relevant details 
-                for the personal companion to remember. This is returned as a 
-                string that contains the extracted information.
+            str: The generated memory output with relevant details for the companion.
 
         Example:
             > get_memory("Hey, I was diagnosed with Arthritis")
@@ -299,3 +235,118 @@ class MemoryGenerator():
         memory = output[0]['generated_text']
         
         return memory
+
+class MemoryAgent():
+    """
+    A class that manages and evaluates memories for a personal agent.
+
+    The `MemoryAgent` class stores a list of memories and uses a pre-trained model 
+    to generate decisions based on incoming memory inputs. It can save and replace memories, 
+    and it uses a text generation pipeline to analyze and respond to memory-related queries.
+
+    Attributes:
+        memories (List[str]): A list of stored memories.
+        model_id (str): The model identifier for the pre-trained text generation model.
+        generation_config (dict): Configuration settings for the text generation model.
+        pipe (transformers.pipelines.TextGenerationPipeline): The text generation pipeline for decision making.
+
+    Methods:
+        _init_pipeline(): Initializes and returns a text generation pipeline.
+        get_agent_decision(incoming_memory: str): Generates a decision based on incoming memory.
+        save_memory(memory: str): Adds a new memory to the list.
+        replace_memory(target_memory: str, replacement_memory: str): Replaces an existing memory with a new one.
+    """
+
+    def __init__(self, memories: List[str]):
+        self.memories = memories
+        
+        self.model_id = "teknium/OpenHermes-2.5-Mistral-7B"
+        self.generation_config = {}
+        
+        self.pipe = self._init_pipeline()
+    
+    def _init_pipeline(self):
+        """
+        Initializes and returns a text generation pipeline.
+
+        Loads the tokenizer and model from the specified `model_id`, configures the model 
+        for text generation with specific settings, and sets up the generation pipeline 
+        to run on the GPU. The pipeline is returned for use in generating text.
+
+        Returns:
+            transformers.pipelines.TextGenerationPipeline: A configured text generation pipeline.
+        """
+        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
+        model = transformers.AutoModelForCausalLM.from_pretrained(self.model_id,
+                                                                  device_map="cuda",
+                                                                  torch_dtype="auto").eval()
+        
+        self.generation_config = model.generation_config
+        self.generation_config.update({
+            "use_cache": True,
+            "do_sample": True,
+            "temperature": 0.2,
+            "top_p": 1.0,
+            "top_k": 0,
+            "max_new_tokens": 512,
+            "eos_token_id": tokenizer.eos_token_id,
+            "pad_token_id": tokenizer.eos_token_id,
+        })
+        
+        pipe = pipeline(
+            "text-generation",
+            model=self.model,
+            tokenizer=self.tokenizer
+        )
+        
+        return pipe
+    
+    def get_agent_decision(self, incoming_memory):
+        """
+        Generates an agent decision based on incoming memory.
+
+        Constructs a prompt using the incoming memory and current function structures, 
+        then generates a decision using the model pipeline. The decision is returned 
+        as the agent's response.
+
+        Args:
+            incoming_memory (str): The incoming memory input to be evaluated by the agent.
+
+        Returns:
+            str: The agent's decision based on the incoming memory.
+        """
+        prompt = memory_agent_prompt.format(function_structure_save_memory = convert_pydantic_to_openai_function(self.save_memory),
+                                            function_structure_replace_memory = convert_pydantic_to_openai_function(self.replace_memory),
+                                            memories = self.memories,
+                                            incoming_memory = incoming_memory)
+        
+        output = self.pipe(prompt, **self.generation_config)
+        agent_decision = output[0]['generated_text']
+        
+        return agent_decision
+    
+    # Save Memory
+    class save_memory(BaseModel):
+        """
+        Save a memory to the list of memories.
+        """
+        memory: str = Field(..., description="The memory to be saved.")
+    
+    def save_memory(self, memory: str) -> None:
+        self.memories.append(memory)
+    
+    # Replace Memory
+    class replace_memory(BaseModel):
+        """
+        Replace a memory in the memory list with a new one.
+        """
+        target_memory: str = Field(..., description="The old memory to be replaced.")
+        replacement_memory: str = Field(..., description="The new memory that will replace the target memory.")
+    
+    def replace_memory(self, target_memory: str, replacement_memory: str) -> None:
+        for i, memory in enumerate(self.memories):
+            if memory == target_memory:
+                self.memories[i] = replacement_memory
+                
+                print(f"[INFO] Memory has been replaced")
+                print(f"[INFO] Old Memory: {target_memory}  |  New Memory: {replacement_memory}")
