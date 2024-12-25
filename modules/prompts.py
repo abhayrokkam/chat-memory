@@ -58,7 +58,7 @@ memory_agent_prompt = """
             <|im_start|>system
             You are a helpful assistant.
             You have to give reasoning using the incoming memory.
-            The solution should include the given format after the reasoning: {"name": "function_name", "arguments": {"arg_1": "value_1", "arg_2": value_2, ...}}.
+            The solution should include the given format after the reasoning: {{"name": "function_name", "arguments": {{"arg_1": "value_1", "arg_2": value_2, ...}}}}.
             The solution can be NONE.
             <|im_end|>
 

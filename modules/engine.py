@@ -3,8 +3,9 @@ import transformers
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 from langchain.utils.openai_functions import convert_pydantic_to_openai_function
-from prompts import judgement_gen_prompt, memory_gen_prompt, memory_agent_prompt
+from .prompts import judgement_gen_prompt, memory_gen_prompt, memory_agent_prompt
 
+import re
 from pydantic import BaseModel, Field
 from typing import List, Dict
 
@@ -238,95 +239,53 @@ class MemoryGenerator():
 
 class MemoryAgent():
     """
-    A class that manages and evaluates memories for a personal agent.
-
-    The `MemoryAgent` class stores a list of memories and uses a pre-trained model 
-    to generate decisions based on incoming memory inputs. It can save and replace memories, 
-    and it uses a text generation pipeline to analyze and respond to memory-related queries.
-
-    Attributes:
-        memories (List[str]): A list of stored memories.
-        model_id (str): The model identifier for the pre-trained text generation model.
-        generation_config (dict): Configuration settings for the text generation model.
-        pipe (transformers.pipelines.TextGenerationPipeline): The text generation pipeline for decision making.
-
-    Methods:
-        _init_pipeline(): Initializes and returns a text generation pipeline.
-        get_agent_decision(incoming_memory: str): Generates a decision based on incoming memory.
-        save_memory(memory: str): Adds a new memory to the list.
-        replace_memory(target_memory: str, replacement_memory: str): Replaces an existing memory with a new one.
     """
-
     def __init__(self, memories: List[str]):
         self.memories = memories
         
         self.model_id = "teknium/OpenHermes-2.5-Mistral-7B"
-        self.generation_config = {}
-        
-        self.pipe = self._init_pipeline()
+        self._init_generation_components()
     
-    def _init_pipeline(self):
+    def _init_generation_components(self):
         """
-        Initializes and returns a text generation pipeline.
-
-        Loads the tokenizer and model from the specified `model_id`, configures the model 
-        for text generation with specific settings, and sets up the generation pipeline 
-        to run on the GPU. The pipeline is returned for use in generating text.
-
-        Returns:
-            transformers.pipelines.TextGenerationPipeline: A configured text generation pipeline.
         """
-        tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
-        model = transformers.AutoModelForCausalLM.from_pretrained(self.model_id,
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
+        self.model = transformers.AutoModelForCausalLM.from_pretrained(self.model_id,
                                                                   device_map="cuda",
                                                                   torch_dtype="auto").eval()
         
-        self.generation_config = model.generation_config
-        self.generation_config.update({
+        self.generation_config = self.model.generation_config
+        self.generation_config.update(**{
             "use_cache": True,
             "do_sample": True,
             "temperature": 0.2,
             "top_p": 1.0,
             "top_k": 0,
             "max_new_tokens": 512,
-            "eos_token_id": tokenizer.eos_token_id,
-            "pad_token_id": tokenizer.eos_token_id,
+            "eos_token_id": self.tokenizer.eos_token_id,
+            "pad_token_id": self.tokenizer.eos_token_id,
         })
-        
-        pipe = pipeline(
-            "text-generation",
-            model=self.model,
-            tokenizer=self.tokenizer
-        )
-        
-        return pipe
     
     def get_agent_decision(self, incoming_memory):
         """
-        Generates an agent decision based on incoming memory.
-
-        Constructs a prompt using the incoming memory and current function structures, 
-        then generates a decision using the model pipeline. The decision is returned 
-        as the agent's response.
-
-        Args:
-            incoming_memory (str): The incoming memory input to be evaluated by the agent.
-
-        Returns:
-            str: The agent's decision based on the incoming memory.
         """
-        prompt = memory_agent_prompt.format(function_structure_save_memory = convert_pydantic_to_openai_function(self.save_memory),
-                                            function_structure_replace_memory = convert_pydantic_to_openai_function(self.replace_memory),
+        prompt = memory_agent_prompt.format(function_structure_save_memory = convert_pydantic_to_openai_function(self.SaveMemory),
+                                            function_structure_replace_memory = convert_pydantic_to_openai_function(self.ReplaceMemory),
                                             memories = self.memories,
                                             incoming_memory = incoming_memory)
         
-        output = self.pipe(prompt, **self.generation_config)
-        agent_decision = output[0]['generated_text']
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.model.device)
+        generated_tokens = self.model.generate(**inputs, generation_config=self.generation_config)
+        output_text = self.tokenizer.decode(generated_tokens.squeeze(), skip_special_tokens=False)
+        
+        pattern = r"<\|im_start\|> Solution(.*?)<\|im_end\|>"
+        match = re.search(pattern, output_text, re.DOTALL)
+        agent_decision = match.group(1).strip()
         
         return agent_decision
     
     # Save Memory
-    class save_memory(BaseModel):
+    class SaveMemory(BaseModel):
         """
         Save a memory to the list of memories.
         """
@@ -336,7 +295,7 @@ class MemoryAgent():
         self.memories.append(memory)
     
     # Replace Memory
-    class replace_memory(BaseModel):
+    class ReplaceMemory(BaseModel):
         """
         Replace a memory in the memory list with a new one.
         """
