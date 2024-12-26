@@ -239,6 +239,23 @@ class MemoryGenerator():
 
 class MemoryAgent():
     """
+    A class that manages memory and makes decisions on memory handling using an AI model.
+
+    The `MemoryAgent` class is responsible for storing, saving, and replacing memories in a list. 
+    It uses a pre-trained language model to make decisions about which function to apply to incoming memory. 
+    The agent determines the appropriate action by evaluating the context of the memories and the new memory input.
+
+    Attributes:
+        memories (List[str]): A list of stored memories.
+        model_id (str): Identifier for the pre-trained language model.
+        tokenizer (transformers.PreTrainedTokenizer): Tokenizer for encoding and decoding text.
+        model (transformers.PreTrainedModel): Pre-trained model for causal language modeling.
+        generation_config (transformers.GenerationConfig): Configuration settings for text generation.
+    
+    Methods:
+        get_agent_decision(incoming_memory): Generates a decision on which function to apply to the incoming memory.
+        save_memory(memory): Saves a new memory to the list of memories.
+        replace_memory(target_memory, replacement_memory): Replaces an existing memory with a new one.
     """
     def __init__(self, memories: List[str]):
         self.memories = memories
@@ -248,6 +265,15 @@ class MemoryAgent():
     
     def _init_generation_components(self):
         """
+        Initializes the tokenizer, model, and generation settings for text generation.
+
+        Loads the pre-trained tokenizer and model, then configures the model's generation parameters,
+        including sampling behavior and token limits.
+
+        Attributes:
+            tokenizer (transformers.PreTrainedTokenizer): Tokenizer for encoding and decoding text.
+            model (transformers.PreTrainedModel): Pre-trained model for causal language modeling.
+            generation_config (transformers.GenerationConfig): Generation configuration settings.
         """
         self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
         self.model = transformers.AutoModelForCausalLM.from_pretrained(self.model_id,
@@ -268,6 +294,16 @@ class MemoryAgent():
     
     def get_agent_decision(self, incoming_memory):
         """
+        Generates an agent's decision on which function to use for the incoming memory.
+
+        This method constructs a prompt based on the current memories and incoming memory, 
+        then uses the model to generate a decision. The decision is extracted from the model's output.
+
+        Args:
+            incoming_memory (str): The new memory input that needs to be processed.
+
+        Returns:
+            str: The agent's decision, indicating which function to use for the incoming memory.
         """
         prompt = memory_agent_prompt.format(function_structure_save_memory = convert_pydantic_to_openai_function(self.SaveMemory),
                                             function_structure_replace_memory = convert_pydantic_to_openai_function(self.ReplaceMemory),
