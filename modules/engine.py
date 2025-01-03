@@ -49,13 +49,13 @@ class JudgementGenerator():
             transformers.pipelines.text_generation.TextGenerationPipeline: A text generation pipeline.
         """
         model = AutoModelForCausalLM.from_pretrained( 
-            self.model_id,
+            f"./cache/models/{self.model_id}",
             device_map="cuda",
             torch_dtype="auto",
             trust_remote_code=True,
         )
 
-        model_tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        model_tokenizer = AutoTokenizer.from_pretrained(f"./cache/tokenizers/{self.model_id}")
 
         pipe = pipeline(
             "text-generation",
@@ -160,13 +160,13 @@ class MemoryGenerator():
             transformers.pipelines.text_generation.TextGenerationPipeline: A text generation pipeline.
         """
         model = AutoModelForCausalLM.from_pretrained( 
-            self.model_id,
+            f"./cache/models/{self.model_id}",
             device_map="cuda",
             torch_dtype="auto",
             trust_remote_code=True,
         )
 
-        model_tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        model_tokenizer = AutoTokenizer.from_pretrained(f"./cache/tokenizers/{self.model_id}")
 
         pipe = pipeline(
             "text-generation",
@@ -275,10 +275,10 @@ class MemoryAgent():
             model (transformers.PreTrainedModel): Pre-trained model for causal language modeling.
             generation_config (transformers.GenerationConfig): Generation configuration settings.
         """
-        self.tokenizer = transformers.AutoTokenizer.from_pretrained(self.model_id)
-        self.model = transformers.AutoModelForCausalLM.from_pretrained(self.model_id,
-                                                                  device_map="cuda",
-                                                                  torch_dtype="auto").eval()
+        self.tokenizer = transformers.AutoTokenizer.from_pretrained(f"./cache/tokenizers/{self.model_id}")
+        self.model = transformers.AutoModelForCausalLM.from_pretrained(f"./cache/models/{self.model_id}",
+                                                                        device_map="cuda",
+                                                                        torch_dtype="auto").eval()
         
         self.generation_config = self.model.generation_config
         self.generation_config.update(**{

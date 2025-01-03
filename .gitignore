@@ -6,3 +6,6 @@ models
 
 # Env files
 .env
+
+# Cache
+cache
