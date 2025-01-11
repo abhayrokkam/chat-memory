@@ -20,7 +20,7 @@ def extract_user_messages(file_path):
     return user_messages
 
 # Caching models from HuggingFace
-def chache_models():
+def cache_models():
     """
     Loading and saving the 'safetensor' files for the models from HuggingFace.
     """

@@ -10,48 +10,92 @@ The primary focus is on enhancing old age care, addressing challenges such as so
 
 - [Memory for Virtual Companion](#memory-for-virtual-companion)
   - [Introduction](#introduction)
-  - [Memory Flow Process](#memory-flow-process)
-  - [Relevance and Extraction](#relevance-and-extraction)
+  - [Proposed System](#proposed-system)
+    - [Overview of the System](#overview-of-the-system)
+    - [Why This Approach?](#why-this-approach)
+  - [Guide to Code](#guide-to-code)
+    - [1. Install Dependencies](#1-install-dependencies)
+    - [2. Cache Necessary Models](#2-cache-necessary-models)
+    - [3. Core Classes](#3-core-classes)
+    - [4. Processing Flow](#4-processing-flow)
+    - [5. Customizations](#5-customizations)
 
-## Memory Flow Process
+## Proposed System
 
 <p align="center">
-  <img src="./images/flow.png"/>
+  <img src="./images/mmory_agent.png"/>
   <br>
-  <em>Proposed flow for the Memory Module</em>
+  <em>System for extracting, saving and replacing memories</em>
 </p>
 
-**How It Works**:
+### Overview of the System
+
+This updated flow diagram encapsulates the entire process of how the Memory Agent operates, combining relevance checking, memory extraction, and memory management.
 
 1. **Relevance Check**:
-The system evaluates the user's message to determine if it contains important or relevant information worth storing as a memory.
+
+- The system begins by evaluating the user's message to determine if it is relevant and worth remembering. 
+
+- To ensure quick decisions, a small language model (SLM), microsoft/Phi-3.5-mini-instruct, is utilized. Its lightweight design enables efficient processing without compromising task accuracy.
 
 2. **Memory Extraction**:
-If relevant, key details are extracted from the message.
 
-3. **Existence Check**:
-The system checks if the memory already exists in its database.
+- If the message is deemed relevant, it proceeds to the memory extraction stage.
 
-4. **Contradiction Check**: If the memory is new, the system verifies that it does not conflict with existing memories. In case of a conflict, the memory is updated to maintain accuracy and consistency.
+- A more capable memory language model (MLM), Qwen/Qwen2.5-7B-Instruct, is used here. This model excels at understanding complex instructions and extracting meaningful details, ensuring structured and insightful memory entries.
 
-This process ensures that the virtual companion can effectively manage and recall user-specific information, providing a more interactive and supportive experience.
+3. **Memory Management**:
 
-## Relevance and Extraction
+- *Existence Check*: The agent checks whether the extracted memory already exists in the database.
 
-<p align="center">
-  <img src="./images/relevance_extraction.png"/>
-  <br>
-  <em>The first half of the flow representing relevence checking and memory extraction</em>
-</p>
+- *Contradiction Check*: If the new memory conflicts with existing information, the system intelligently resolves the conflict by replacing outdated or contradictory memories.
 
-1. **Receiving the User's Message**: The process begins when the system receives a message from the user, which is then analyzed for relevance to determine if it contains information worth remembering.
+- *Save Memory*: If the memory is new and doesn't contradict existing knowledge, it is stored directly.
 
-2. **Relevance Check**: The model used for this decision is `microsoft/Phi-3.5-mini-instruct`, a lightweight language model with only 3 billion parameters. This model is chosen for its efficiency and quick decision-making capabilities, making it ideal for initial relevance checks.
+- *Replace Memory*: When contradictions are detected, the conflicting memory is updated or replaced to maintain the integrity of the system's knowledge base.
 
-    - Future Plan: The system aims to replace this with a fine-tuned `BERT` classification model trained on synthetic data for better accuracy and task-specific performance.
+### Why This Approach?
+This streamlined system leverages the strengths of both small and large language models to achieve a balance between speed and accuracy. Additionally, the memory agent ensures consistency and adaptability by managing conflicts and replacing outdated information, making the system dynamic and capable of learning over time.
 
-3. **Memory Extraction**: If the message is deemed relevant, it is passed to a larger model, `Qwen/Qwen2.5-7B-Instruct`, which performs detailed memory extraction. The larger model is employed for its advanced understanding of instructions and ability to generate well-structured outputs.
+## Guide to Code
 
-    - Future Plan: Currently, the model is selected based on GPU power limitations. However, the long-term objective is to integrate a more advanced, larger model to further improve comprehension and task performance.
+### 1. Install Dependencies
 
-By dividing tasks between smaller and larger models, this approach ensures a balance between speed and accuracy, optimizing the system for efficient memory processing.
+```
+pip install -r requirements.txt
+```
+
+### 2. Cache Necessary Models
+
+```
+from utils import cache_models
+
+cache_models()
+```
+
+### 3. Core Classes
+
+- The main logic resides in `engine.py`, which contains three classes:
+  - `JudgementGenerator`: Handles relevance checks for user messages.
+  - `MemoryGenerator`: Extracts meaningful details from relevant messages.
+  - `MemoryAgent`: Manages memory storage, conflict resolution, and updates.
+
+### 4. Processing Flow
+
+- Relevance Check:
+  - Pass the user's message to `get_judgement()` from the `JudgementGenerator` class.
+
+- Memory Extraction:
+  - If the judgement is positive (True), pass the message to `get_memory()` from the `MemoryGenerator` class.
+
+- Agent Decision:
+  - The extracted memory is passed to `get_agent_decision()` from the `MemoryAgent` class.
+  - Based on the decision, the agent will respond with:
+    - `NONE`: No action required.
+    - Function call: `save_memory` (for new memories).
+    - Function call: `replace_memory` (for conflicting or outdated memories).
+
+### 5. Customizations
+
+- Consider upgrading the model used in the `MemoryAgent` to a larger one if computational resources allow. Models with >13 billion parameters are recommended.
+- If using fine-tuned models for function calling, you might need to adjust the prompt used by the `MemoryAgent` for optimal results.
